@@ -76,3 +76,47 @@ a zip is self-documenting on its own.
   not a computed optimum (see the comment on `fulfillAuditJob`)
 - Nothing in this session has actually run — same network caveat as
   session 1
+
+## Session 3 — the other three agents, same bar
+
+**Added**
+
+- `packages/agent-rebalancing` — `monitor.ts` (real range-check and
+  recentering math), `rebalance.ts` + the position read in `monitor.ts`
+  explicitly NOT implemented: PancakeSwap Infinity's CLAMM turned out to
+  use a singleton `CLPositionManager` (see
+  `pancakeswap/infinity-periphery` on GitHub) with Permit2-gated calls —
+  a real architecture difference from classic V3, confirmed by research
+  this session, not assumed. `task.ts` job handler.
+- `packages/agent-grid-trading` — `grid.ts` (real, pure state-machine
+  logic for which levels a price move triggers — no chain calls, easy to
+  test alone), `execute.ts` explicitly deferred to the Altana PancakeSwap
+  Trading skill rather than hand-rolling Universal Router command
+  encoding, `task.ts` job handler.
+- `packages/agent-yield-optimisation` — `rates.ts` (Aave V3 and Venus
+  supply APR, both real reads), `compare.ts` (real routing decision),
+  `reallocate.ts` (real atomic withdraw+supply pattern, calldata supplied
+  by caller), `task.ts` job handler. Lista APR and PancakeSwap LP fee APR
+  explicitly NOT implemented — both need a data source beyond a single
+  contract read.
+- `AGENT_BRIEF.md` for each, same pattern as session 2
+
+**Decisions made**
+
+- Different agents get different confidence treatment on purpose: Aave/
+  Venus rate reads and the health-factor logic are written as real,
+  working code; PancakeSwap Infinity's position calls and Universal
+  Router's swap encoding are explicitly stubbed rather than guessed,
+  because actual research this session turned up real architecture I
+  don't have verified, precise knowledge of. Better to flag that
+  honestly than ship a plausible-looking wrong ABI.
+- Every stub points at a specific, real source to build against (a GitHub
+  path, a named Altana skill) — never just "TODO"
+
+**Not started yet**
+
+- Same network caveat as sessions 1 and 2 — nothing has run
+- The specific stubs listed above, each with its reasoning left in the
+  code comment rather than repeated here
+- No agent beyond Health Factor Monitoring has an AGENT_BRIEF that's
+  actually been fed to Cursor/Agent Studio yet
