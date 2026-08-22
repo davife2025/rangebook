@@ -4,7 +4,7 @@ import { useState } from "react";
 import { AltanaClient } from "@altananetwork/sdk";
 import { activateAgent } from "@rangebook/altana";
 import { buildEvenGrid } from "@rangebook/agent-grid-trading";
-import { useWallet, Button, Card, Bound, CountdownBound } from "@rangebook/ui";
+import { useWallet, Button, Card, Bound, CountdownBound, ensurePermit2Approval } from "@rangebook/ui";
 import type { AgentCategory } from "@rangebook/db";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8787";
@@ -59,6 +59,23 @@ export function ActivateForm(props: ActivateFormProps) {
       if (props.category === "rebalancing") {
         if (!positionTokenId) throw new Error("Enter your position's token ID.");
         if (!props.positionManagerAddress) throw new Error("NEXT_PUBLIC_CL_POSITION_MANAGER_ADDRESS isn't set.");
+        // Rebalancing only collects a tokenId — the pool's actual tokens
+        // aren't known until read. readPosition is a plain public read
+        // (no session needed yet), safe to call here before Permit2
+        // approval or the session grant.
+        const { readPosition } = await import("@rangebook/agent-rebalancing");
+        const position = await readPosition(BigInt(positionTokenId), props.positionManagerAddress);
+        // CLPositionManager pulls tokens through Permit2 too, same as
+        // Universal Router — confirmed in the same PancakeSwap guide the
+        // rebalance() research came from this session.
+        for (const token of [position.poolKey.currency0, position.poolKey.currency1]) {
+          await ensurePermit2Approval({
+            walletClient: wallet.client,
+            account: wallet.address,
+            token,
+            spender: props.positionManagerAddress,
+          });
+        }
         const res = await fetch(`${API_URL}/positions/rebalancing`, {
           method: "POST",
           headers: { "content-type": "application/json" },
@@ -77,6 +94,20 @@ export function ActivateForm(props: ActivateFormProps) {
           throw new Error("Fill in the pair, range, and amount per level.");
         }
         if (!props.universalRouterAddress) throw new Error("NEXT_PUBLIC_UNIVERSAL_ROUTER_ADDRESS isn't set.");
+        // The one-time approval flagged since session 9 — without this,
+        // the first real swap would revert on PERMIT2_TRANSFER_FROM.
+        await ensurePermit2Approval({
+          walletClient: wallet.client,
+          account: wallet.address,
+          token: baseToken as `0x${string}`,
+          spender: props.universalRouterAddress,
+        });
+        await ensurePermit2Approval({
+          walletClient: wallet.client,
+          account: wallet.address,
+          token: quoteToken as `0x${string}`,
+          spender: props.universalRouterAddress,
+        });
         // Same grid math the agent itself runs — not reimplemented here.
         const config = buildEvenGrid(Number(floor), Number(ceiling), Number(levelCount), {
           base: baseToken as `0x${string}`,

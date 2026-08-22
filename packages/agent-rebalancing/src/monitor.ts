@@ -70,6 +70,10 @@ export interface RangeState {
   tickUpper: number;
 }
 
+export interface PositionState extends RangeState {
+  poolKey: PoolKey;
+}
+
 export type RangeStatus = "in_range" | "out_of_range_below" | "out_of_range_above";
 
 /** Protocol-agnostic — correct regardless of which exact call produced RangeState. */
@@ -99,7 +103,7 @@ export async function readPosition(
   positionTokenId: bigint,
   positionManagerAddress: `0x${string}`,
   env: "mainnet" | "testnet" = "testnet",
-): Promise<RangeState> {
+): Promise<PositionState> {
   const client = clientFor(env);
 
   const [poolKey, tickLower, tickUpper] = await client.readContract({
@@ -118,7 +122,7 @@ export async function readPosition(
     args: [poolId],
   });
 
-  return { currentTick, tickLower, tickUpper };
+  return { currentTick, tickLower, tickUpper, poolKey };
 }
 
 /**

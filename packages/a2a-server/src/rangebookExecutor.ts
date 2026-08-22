@@ -153,6 +153,7 @@ export class RangebookExecutor implements AgentExecutor {
             rangeWidthTicks: tracked.range_width_ticks,
             sessionKeyAddress: session.sessionKeyAddress,
             sessionSigner: signer,
+            walletAddress: targetWallet,
           });
           this.completeWithArtifact(eventBus, taskId, contextId, "rebalance-result", result);
         } catch (err) {

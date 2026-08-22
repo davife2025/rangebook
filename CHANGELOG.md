@@ -502,3 +502,62 @@ can exceed `Number.MAX_SAFE_INTEGER`, and whether Supabase-js returns
 large `numeric` columns as a string or a number isn't confirmed. Typing
 it as a string doesn't quietly promise precision that hasn't been
 verified.
+
+## Session 13 — Rebalancing's write (partial), Permit2 for both categories
+
+Picked two items off the "what's left unbuilt" list — the one with the
+most research upside, and the one that was actually closeable outright.
+
+**Rebalancing's write — substantially de-risked, not finished, and said
+plainly rather than rounded up**
+
+Researched `CLPositionManager.modifyLiquidities` against
+`infinity-periphery`'s own `Actions.sol` and PancakeSwap's "Manage
+liquidity" guide. Confirmed real: the action-byte values
+(`CL_DECREASE_LIQUIDITY = 0x01`, `CL_MINT_POSITION = 0x02`), the overall
+payload shape (`abi.encode(actions, params)`, same actions-bytes +
+params-bytes[] structure as Universal Router), and `CL_MINT_POSITION`'s
+full 8-field encoding — now real as `buildMintPositionAction`. Three
+things are still genuinely open, named precisely in `rebalance.ts` rather
+than left as one vague gap: `CL_DECREASE_LIQUIDITY`'s exact param tuple
+(inferred, not sourced), how tokens freed by decreasing flow into minting
+within one atomic payload (assumed analogous to Grid Trading's swap
+pattern, not verified), and the settlement/`CLOSE_CURRENCY` sequence.
+`rebalance()` itself still throws — this is a better-informed stub, and
+calling it "real" would be the same mistake as an unverified ABI
+presented with false confidence.
+
+`monitor.ts`'s `readPosition` now also returns the pool's `poolKey`
+(it was already fetching this internally and discarding it) — needed by
+`rebalance()` to know which pool to mint into. `task.ts` and the A2A
+executor updated to thread it through.
+
+**Permit2 approval — closed for both categories that needed it**
+
+`packages/ui/src/permit2.ts` — the two-step approval (`ERC20.approve` to
+Permit2, then `Permit2.approve` to the actual spender) flagged as missing
+since session 9. Wired into `ActivateForm` for both Grid Trading
+(approves the Universal Router) and Rebalancing (approves
+CLPositionManager — confirmed by the same PancakeSwap guide as needing
+this too, not assumed). Always sends both transactions rather than
+checking existing allowance first — simpler and idempotent, at the cost
+of an occasional redundant transaction.
+
+**A bug caught while wiring it, from the same edit that introduced it**
+
+First pass at Rebalancing's Permit2 step reused `baseToken`/`quoteToken`
+state — which belongs to the Grid Trading form, not Rebalancing, which
+only collects a position ID. Rebalancing doesn't know its pool's tokens
+until read. Fixed by calling `readPosition` (a plain public read, no
+session needed) before requesting approval, using the real
+`poolKey.currency0`/`currency1` instead of unrelated form state.
+
+**Not done**
+
+- The three named gaps in `rebalance()`
+- Venus health factor, PancakeSwap LP fee APR, Lista APR — still zero
+  code, per the "what's unbuilt" review
+- x402's real Express wiring, ERC-8183 buyer side, real key custody,
+  mainnet
+- Same network caveat as every session — none of this has run, including
+  whether Permit2 is really deployed at the assumed address on BSC
