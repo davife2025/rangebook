@@ -1,33 +1,45 @@
 import { Bound, CountdownBound, Button, Card } from "@rangebook/ui";
 
-// Sample shape only — replace once agents are deployed and apps/api is
-// wired to live 8004scan + chain reads. Never ship these as real numbers.
-const CATEGORIES = [
-  {
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8787";
+
+interface AgentMetric {
+  metric_label: string | null;
+}
+
+interface AgentWithMetrics {
+  id: string;
+  category: string;
+  name: string;
+  tagline: string;
+  metrics: Record<string, AgentMetric>;
+}
+
+const CATEGORY_META: Record<string, { slug: string; name: string; blurb: string; statKey: string | null }> = {
+  rebalancing: {
     slug: "rebalancing",
     name: "Rebalancing",
     blurb: "Keeps your liquidity position in range, automatically.",
-    stat: "in range · 92% uptime",
+    statKey: null, // no agent-agnostic market number yet — see apps/api/src/jobs/refreshMetrics.ts
   },
-  {
+  grid_trading: {
     slug: "grid-trading",
     name: "Grid Trading",
     blurb: "Places and manages a grid of orders so you don't watch the chart.",
-    stat: "12 levels active",
+    statKey: null,
   },
-  {
+  yield_optimisation: {
     slug: "yield-optimisation",
     name: "Yield Optimisation",
     blurb: "Moves liquidity to wherever the real yield actually is.",
-    stat: "8.2% best APR found",
+    statKey: "best_apr", // real: compares live Aave + Venus rates, see refreshMetrics.ts
   },
-  {
+  health_factor_monitoring: {
     slug: "health-factor-monitoring",
     name: "Health Factor Monitoring",
     blurb: "Watches your lending position and defends it before liquidation.",
-    stat: "HF 1.34",
+    statKey: null,
   },
-];
+};
 
 const STEPS = [
   {
@@ -44,9 +56,24 @@ const STEPS = [
   },
 ];
 
+async function getAgents(): Promise<AgentWithMetrics[] | null> {
+  try {
+    const res = await fetch(`${API_URL}/agents`, { next: { revalidate: 60 } });
+    if (!res.ok) return null;
+    const body = await res.json();
+    return body.agents ?? [];
+  } catch {
+    // API not reachable — render the honest "not deployed yet" state
+    // instead of crashing the whole page.
+    return null;
+  }
+}
+
 const heroExpiry = new Date(Date.now() + 22 * 60 * 60 * 1000 + 41 * 60 * 1000);
 
-export default function MarketplacePage() {
+export default async function MarketplacePage() {
+  const agents = await getAgents();
+
   return (
     <div className="min-h-screen">
       <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-6">
@@ -68,7 +95,10 @@ export default function MarketplacePage() {
         </nav>
       </header>
 
-      {/* Hero — the thesis, made concrete rather than claimed */}
+      {/* Hero — illustrative on purpose. A live real session belongs to a
+          specific wallet; showing one on the public homepage would mean
+          exposing a real user's data, which isn't something to do even if
+          it were technically easy. */}
       <section className="mx-auto max-w-6xl px-6 pb-20 pt-12 md:pt-20">
         <div className="grid items-center gap-12 md:grid-cols-2">
           <div>
@@ -97,13 +127,13 @@ export default function MarketplacePage() {
 
           <Card className="!p-8">
             <p className="mb-6 text-xs font-semibold tracking-[0.1em]" style={{ color: "var(--color-mist)" }}>
-              A REAL SESSION, RIGHT NOW
+              HOW A SESSION LOOKS
             </p>
             <p
               className="mb-6 text-sm font-medium"
               style={{ fontFamily: "var(--font-display)", color: "var(--color-paper)" }}
             >
-              Health Factor Monitoring — Venus position
+              Health Factor Monitoring — example
             </p>
             <div className="flex flex-col gap-5">
               <Bound kind="may" value="supply · repay" />
@@ -114,35 +144,51 @@ export default function MarketplacePage() {
         </div>
       </section>
 
-      {/* Categories — real shape, not icon + adjective */}
+      {/* Categories — real metrics where an agent is deployed and a real
+          market number exists; an honest "not deployed yet" otherwise. */}
       <section id="agents" className="mx-auto max-w-6xl px-6 py-16">
         <h2 className="mb-8 text-2xl font-semibold" style={{ fontFamily: "var(--font-display)" }}>
           Browse by what you need
         </h2>
         <div className="grid gap-5 sm:grid-cols-2">
-          {CATEGORIES.map((c) => (
-            <Card key={c.slug} className="flex flex-col justify-between">
-              <div>
-                <h3 className="text-lg font-semibold" style={{ fontFamily: "var(--font-display)" }}>
-                  {c.name}
-                </h3>
-                <p className="mt-2 text-sm leading-relaxed" style={{ color: "var(--color-mist)" }}>
-                  {c.blurb}
-                </p>
-              </div>
-              <div className="mt-6 flex items-center justify-between">
-                <span
-                  className="text-sm"
-                  style={{ fontFamily: "var(--font-data)", color: "var(--color-signal)" }}
-                >
-                  [ {c.stat} ]
-                </span>
-                <a href={`/agents/${c.slug}`} className="text-sm font-medium hover:underline">
-                  View agent →
-                </a>
-              </div>
-            </Card>
-          ))}
+          {Object.entries(CATEGORY_META).map(([category, meta]) => {
+            const agent = agents?.find((a) => a.category === category);
+            const stat = agent && meta.statKey ? agent.metrics[meta.statKey]?.metric_label : null;
+            const reputation = agent?.metrics["reputation_score"]?.metric_label;
+
+            return (
+              <Card key={category} className="flex flex-col justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold" style={{ fontFamily: "var(--font-display)" }}>
+                    {meta.name}
+                  </h3>
+                  <p className="mt-2 text-sm leading-relaxed" style={{ color: "var(--color-mist)" }}>
+                    {meta.blurb}
+                  </p>
+                </div>
+                <div className="mt-6 flex items-center justify-between">
+                  {stat || reputation ? (
+                    <span
+                      className="text-sm"
+                      style={{ fontFamily: "var(--font-data)", color: "var(--color-signal)" }}
+                    >
+                      [ {stat ?? reputation} ]
+                    </span>
+                  ) : (
+                    <span className="text-sm" style={{ color: "var(--color-mist)" }}>
+                      Not deployed yet
+                    </span>
+                  )}
+                  <a
+                    href={agent ? `/agents/${meta.slug}` : "/DEPLOY.md"}
+                    className="text-sm font-medium hover:underline"
+                  >
+                    {agent ? "View agent →" : "Deploy this agent →"}
+                  </a>
+                </div>
+              </Card>
+            );
+          })}
         </div>
       </section>
 

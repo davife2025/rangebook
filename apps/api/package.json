@@ -13,6 +13,7 @@
     "@rangebook/db": "workspace:*",
     "@rangebook/chain": "workspace:*",
     "@rangebook/altana": "workspace:*",
+    "@rangebook/agent-yield-optimisation": "workspace:*",
     "hono": "^4.6.0",
     "@hono/node-server": "^1.13.0"
   },

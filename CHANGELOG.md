@@ -120,3 +120,41 @@ a zip is self-documenting on its own.
   code comment rather than repeated here
 - No agent beyond Health Factor Monitoring has an AGENT_BRIEF that's
   actually been fed to Cursor/Agent Studio yet
+
+## Session 4 — data layer: real numbers on the marketplace cards
+
+**Added**
+
+- `apps/api/src/jobs/refreshMetrics.ts` — pulls real 8004scan reputation
+  for any deployed agent, plus a real live APR comparison (Aave vs Venus)
+  for Yield Optimisation. Deliberately does NOT invent a placeholder
+  number for Rebalancing, Grid Trading, or Health Factor Monitoring —
+  those three only mean something against a specific user's position,
+  which doesn't exist pre-activation. Per-agent, per-source try/catch so
+  one failed read doesn't blank every card.
+- `POST /admin/refresh-metrics` — manual trigger, plus a 5-minute
+  background interval started on boot
+
+**Changed**
+
+- `apps/api/src/routes/agents.ts` — responses now collapse metric history
+  down to one current value per `metric_key`
+- `apps/web/app/page.tsx` — rebuilt as an async server component fetching
+  real agent + metric data instead of the hardcoded sample array from
+  session 1. Categories with nothing real to show yet render an honest
+  "Not deployed yet" state rather than a fake number.
+- Hero relabeled from "A REAL SESSION, RIGHT NOW" to "HOW A SESSION
+  LOOKS" — showing an actual user's real session on the public homepage
+  would mean exposing their data, which isn't something to do even once
+  it's technically possible, so the copy shouldn't have implied it either
+- `.env.example` — added the reference-asset vars the metrics job needs
+
+**Not started yet**
+
+- Same network caveat as every prior session — nothing has run
+- Grid Trading and Rebalancing still have no agent-agnostic market stat;
+  worth revisiting once there's a sensible one (e.g. current pair price
+  for Grid Trading) rather than leaving both permanently on reputation
+  alone
+- `/agents/[category]` detail pages don't exist yet — the "View agent →"
+  links on category cards point nowhere real yet
