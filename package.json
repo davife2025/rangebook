@@ -5,6 +5,7 @@
   "packageManager": "pnpm@9.12.0",
   "scripts": {
     "dev": "turbo run dev",
+    "dev:a2a": "turbo run dev:a2a",
     "build": "turbo run build",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck"

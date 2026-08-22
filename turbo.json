@@ -6,6 +6,7 @@
       "outputs": [".next/**", "!.next/cache/**", "dist/**"]
     },
     "dev": { "cache": false, "persistent": true },
+    "dev:a2a": { "cache": false, "persistent": true },
     "lint": {},
     "typecheck": { "dependsOn": ["^build"] }
   }

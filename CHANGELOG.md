@@ -158,3 +158,63 @@ a zip is self-documenting on its own.
   alone
 - `/agents/[category]` detail pages don't exist yet — the "View agent →"
   links on category cards point nowhere real yet
+
+## Session 5 — A2A protocol integration
+
+**Added**
+
+- `packages/a2a-server` — new package: `agentCard.ts` (one card, four
+  skills, ERC-8004 cross-referenced via a custom extension rather than a
+  second identity system), `skillRouter.ts` (resolves which skill a
+  message means — explicit `metadata.skillId` first, keyword fallback
+  otherwise), `rangebookExecutor.ts` (the one `AgentExecutor` for the
+  whole card — this is the adapter layer; it calls the exact same
+  `fulfillAuditJob` / `fulfillYieldJob` functions built in sessions 2–3,
+  no new business logic), `server.ts` (Express + Agent Card + JSON-RPC/REST
+  routes)
+- `lib/agentSigner.ts` — the one genuinely new piece of state this layer
+  needed: something has to hold the key that signs on the agent's behalf
+  at request time. Explicitly marked testnet-only, not real custody
+- `lib/sessionLookup.ts` — finds a wallet's active session for a category,
+  re-verified against Keystore, same "cache is for speed, not trust" rule
+  as the Permissions dashboard
+- `lib/x402Guard.ts` — the payment gate, defaulted to pass-through
+  (`A2A_REQUIRE_PAYMENT=false`) until `@altananetwork/x402-server`'s real
+  Express export is confirmed against Altana's actual docs for that
+  integration, rather than guessing an API shape the way an ABI shouldn't
+  be guessed either
+- `apps/api/src/a2a-server.ts` — second process within apps/api (`pnpm
+  dev:a2a`), separate from the main Hono server, because a2a-js's HTTP
+  glue is Express-specific and re-implementing JSON-RPC/REST bindings by
+  hand to force it onto Hono isn't worth it
+
+**Verified this session (not assumed)**
+
+- `TaskState.AUTH_REQUIRED` really is the literal string `"auth-required"`
+  in the v0.3 JS SDK — confirmed against the spec's own TypeScript enum
+  and independently against the Python SDK's enum, not left as the
+  flagged guess it was last turn
+
+**Per-skill honesty, by design**
+
+- `monitor-health-factor` — fully wired, reuses session 2's agent as-is
+- `optimize-yield` — fully wired for a plain rate check (no session
+  needed); the fuller "should I move" comparison needs a caller-supplied
+  current venue, which most callers won't have
+- `rebalance-liquidity`, `run-grid` — both return a clear `failed` status
+  naming the exact gap (no position/grid-config tracking exists yet, on
+  top of the chain-call stubs already flagged in sessions 2–3) rather than
+  either faking a response or crashing the server
+
+**Not started yet**
+
+- Same network caveat as every session — nothing here has actually run,
+  and `@a2a-js/sdk`'s types haven't been checked against real compiled
+  output
+- `InMemoryTaskStore` — task history doesn't survive a restart; fine for
+  now, worth swapping for Supabase before it needs to persist
+- Real key custody for `agentSigner.ts`
+- LP position tracking (rebalancing) and grid configuration storage
+  (grid trading) — both block their respective A2A skills and their
+  original marketplace flows equally
+- The real `@altananetwork/x402-server` Express wiring

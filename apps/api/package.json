@@ -5,8 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
+    "dev:a2a": "tsx watch src/a2a-server.ts",
     "build": "tsc",
     "start": "node dist/index.js",
+    "start:a2a": "node dist/a2a-server.js",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -14,6 +16,7 @@
     "@rangebook/chain": "workspace:*",
     "@rangebook/altana": "workspace:*",
     "@rangebook/agent-yield-optimisation": "workspace:*",
+    "@rangebook/a2a-server": "workspace:*",
     "hono": "^4.6.0",
     "@hono/node-server": "^1.13.0"
   },

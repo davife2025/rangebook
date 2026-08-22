@@ -1,0 +1,25 @@
+{
+  "name": "@rangebook/a2a-server",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "dependencies": {
+    "@a2a-js/sdk": "^0.3.13",
+    "express": "^4.21.0",
+    "viem": "^2.21.0",
+    "uuid": "^10.0.0",
+    "@rangebook/db": "workspace:*",
+    "@rangebook/altana": "workspace:*",
+    "@rangebook/agent-health-factor": "workspace:*",
+    "@rangebook/agent-rebalancing": "workspace:*",
+    "@rangebook/agent-grid-trading": "workspace:*",
+    "@rangebook/agent-yield-optimisation": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.0",
+    "@types/uuid": "^10.0.0",
+    "typescript": "^5.6.0"
+  }
+}

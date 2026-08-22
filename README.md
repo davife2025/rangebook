@@ -16,11 +16,17 @@ apps/
   web/      Next.js — the marketplace + Permissions dashboard
   api/      Node + Hono — data aggregation, session orchestration, ERC-8183/x402 endpoints
 packages/
-  db/       Supabase client, schema, types — cache + product data, NOT the source of truth for permissions
-  altana/   grantSession / execute / revokeSession, mapped per agent category
-  chain/    viem clients + 8004scan client — live onchain reads
-  ui/       shared design system (tokens, Bound, Button, Card)
+  db/         Supabase client, schema, types — cache + product data, NOT the source of truth for permissions
+  altana/     grantSession / execute / revokeSession, mapped per agent category
+  chain/      viem clients + 8004scan client — live onchain reads
+  ui/         shared design system (tokens, Bound, Button, Card)
+  a2a-server/ A2A protocol endpoint — lets any A2A-speaking agent (not just BNB-native ones) discover
+              and hire the four agents below; a thin adapter over the same task handlers, not new logic
+  agent-*/    the actual per-category business logic (health factor, rebalancing, grid, yield)
 ```
+
+`apps/api` runs as two processes: `pnpm dev` (the main Hono API) and `pnpm dev:a2a` (the A2A/Express
+server) — see `packages/a2a-server`'s note on why they're not on one framework.
 
 **The one rule that matters most:** Keystore is always the source of truth
 for what an agent may do. `sessions_cache` in Supabase exists so the
