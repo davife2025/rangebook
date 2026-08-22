@@ -1,7 +1,6 @@
 import { Hono } from "hono";
 import { createServerClient } from "@rangebook/db";
-import { activateAgent, revokeAgentSession } from "@rangebook/altana";
-import type { AgentCategory } from "@rangebook/db";
+import { revokeAgentSession } from "@rangebook/altana";
 
 export const sessionsRoute = new Hono();
 
@@ -25,37 +24,40 @@ sessionsRoute.get("/", async (c) => {
   return c.json({ sessions: data });
 });
 
-interface ActivateBody {
-  category: AgentCategory;
+interface RecordGrantBody {
   agentId: string;
   userWalletAddress: `0x${string}`;
-  userAdminSigner: unknown;
-  agentSessionSigner: `0x${string}`;
+  sessionKeyAddress: `0x${string}`;
+  expiresAt: string; // ISO — from ActivateAgentResult, already computed client-side
+  keystoreTxHash: `0x${string}`;
 }
 
-// POST /sessions/activate
+/**
+ * POST /sessions/activate — despite the name, this never grants a
+ * session; it records one that the browser already granted. See the note
+ * on activateAgent in packages/altana/src/session.ts for why: a server
+ * can't sign with a user's admin key without becoming the custodian this
+ * whole architecture exists to avoid, so the actual altana.grantSession()
+ * call happens client-side, in apps/web's ActivateForm, with the
+ * connected wallet. This endpoint's only job is to write the result —
+ * already real, already on Keystore — into sessions_cache so the
+ * Permissions dashboard has something to read.
+ */
 sessionsRoute.post("/activate", async (c) => {
-  const body = await c.req.json<ActivateBody>();
-
-  const result = await activateAgent({
-    category: body.category,
-    userWalletAddress: body.userWalletAddress,
-    userAdminSigner: body.userAdminSigner,
-    agentSessionSigner: body.agentSessionSigner,
-  });
+  const body = await c.req.json<RecordGrantBody>();
 
   const db = createServerClient();
   const { error } = await db.from("sessions_cache").insert({
     user_wallet_address: body.userWalletAddress,
     agent_id: body.agentId,
-    session_key_address: result.sessionKeyAddress,
+    session_key_address: body.sessionKeyAddress,
     calls: [],
-    expires_at: result.expiresAt.toISOString(),
-    keystore_tx_hash: result.keystoreTxHash,
+    expires_at: body.expiresAt,
+    keystore_tx_hash: body.keystoreTxHash,
   });
 
   if (error) return c.json({ error: error.message }, 500);
-  return c.json({ session: result });
+  return c.json({ recorded: true });
 });
 
 // POST /sessions/:sessionKeyAddress/revoke

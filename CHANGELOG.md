@@ -379,3 +379,87 @@ Grid Trading can now run for real, which means: the required trading
 task for the Advantage Report is unblocked, the win-rate track record
 TermiX weights becomes producible, and three of four agents are fully
 real end to end (only Rebalancing's write remains stubbed).
+
+## Session 10 — static audit, not new code
+
+Prompted by a real question: nine sessions of edits, changed signatures,
+and new cross-package imports is exactly the situation where something
+gets missed. Checked rather than assumed.
+
+**Found and fixed**
+
+- `packages/altana` has imported `AgentCategory` from `@rangebook/db` in
+  both `skills.ts` and `session.ts` since session 1, but never declared
+  `@rangebook/db` as a dependency in its `package.json`. Would have
+  failed to resolve under pnpm's default strict, non-hoisted dependency
+  isolation on the first real `pnpm install` — the exact kind of thing
+  that wastes an hour on a trivial cause.
+
+**Checked and clean**
+
+- Every cross-package import has a matching declared dependency (one
+  exception, above, now fixed)
+- Every call site of every function whose signature changed mid-project
+  (`readPosition`, `fulfillRebalanceJob`, `executeLevel`,
+  `fulfillGridJob`) matches its current definition — no stale callers
+  left behind
+- Every barrel export (`index.ts`) actually re-exports what other
+  packages import from it
+- Every package's `main`/`types` field resolves to a real file
+
+**Still true**
+
+This is a static read-through, not a real compile — it catches the class
+of error most likely to have crept in (missing deps, stale call sites)
+but isn't a substitute for an actual `tsc` run in a real environment.
+
+## Session 11 — the missing activation flow, and a real architecture bug it exposed
+
+**Added**
+
+- `apps/web/app/agents/[category]/page.tsx` — the agent detail page that
+  never existed; server component, resolves the category's contract
+  allowlist and may/may-not boundaries server-side rather than
+  duplicating them behind client env vars
+- `apps/web/components/ActivateForm.tsx` — the actual Activate flow:
+  connect wallet, category-specific inputs (position token ID for
+  Rebalancing; pair/range/amount for Grid Trading, reusing the exact
+  `buildEvenGrid` the agent itself runs), grant, record
+- `apps/web/components/WalletButton.tsx`, `packages/ui/src/useWallet.ts` —
+  real wallet connection, standard EIP-1193 pattern. Low-risk, well-
+  established — doesn't carry the same verification flags as the DeFi-
+  protocol-specific work elsewhere in this repo
+
+**Fixed — a real architecture bug, not a stub**
+
+`activateAgent` was being called from apps/api, server-side, with a
+`userAdminSigner` from the request body. That can't work: a server can
+never actually hold a user's admin key without becoming the custodian
+this whole project's Altana track exists to avoid — there's no valid
+value that JSON body field could ever contain. `grantSession` has to be
+signed in the browser, where the wallet lives. Fixed by:
+- `packages/altana/src/session.ts` — `activateAgent` now takes an
+  already-constructed `altanaClient` rather than building one from
+  server env vars, making it callable correctly from either side
+- `apps/api/src/routes/sessions.ts` — `POST /sessions/activate` no longer
+  performs a grant; it records one the browser already completed. Renamed
+  its body shape to match — this was silently wrong from session 1 until
+  building the real UI forced the question of who actually signs
+
+**New, correctly scoped uncertainty**
+
+Whether Altana's API key is safe to expose client-side (like a
+publishable key) or needs to stay server-only isn't confirmed —
+`NEXT_PUBLIC_ALTANA_API_KEY` is used as the deliberate, explicit choice
+of "this one is public," separate from the server's key, rather than
+quietly reusing the secret in the browser. Check Altana's docs for key
+scoping before trusting this past testnet.
+
+**Not done**
+
+- The Rebalancing and Grid Trading category-specific forms assume
+  deployment-level addresses (`NEXT_PUBLIC_CL_POSITION_MANAGER_ADDRESS`,
+  `NEXT_PUBLIC_UNIVERSAL_ROUTER_ADDRESS`) are set — same "pull from the
+  current skill file" rule as everywhere else
+- No loading/success state polish beyond the basics
+- Same network caveat as every session — none of this has run

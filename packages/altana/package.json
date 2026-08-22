@@ -7,6 +7,7 @@
   "types": "src/index.ts",
   "dependencies": {
     "@altananetwork/sdk": "^0.1.0",
+    "@rangebook/db": "workspace:*",
     "viem": "^2.21.0"
   },
   "devDependencies": {

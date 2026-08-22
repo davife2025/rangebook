@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { createServerClient } from "@rangebook/db";
-import type { AgentMetric } from "@rangebook/db";
+import type { AgentMetric, AgentCategory } from "@rangebook/db";
+import { privateKeyToAccount } from "viem/accounts";
 
 export const agentsRoute = new Hono();
 
@@ -19,6 +20,7 @@ agentsRoute.get("/", async (c) => {
     ...agent,
     agent_metrics: undefined,
     metrics: latestByKey(agent.agent_metrics ?? []),
+    sessionSignerAddress: sessionSignerAddressFor(agent.category),
   }));
 
   return c.json({ agents });
@@ -39,6 +41,7 @@ agentsRoute.get("/:id", async (c) => {
     ...data,
     agent_metrics: undefined,
     metrics: latestByKey(data.agent_metrics ?? []),
+    sessionSignerAddress: sessionSignerAddressFor(data.category),
   };
 
   return c.json({ agent });
@@ -54,4 +57,33 @@ function latestByKey(metrics: AgentMetric[]): Record<string, AgentMetric> {
     }
   }
   return byKey;
+}
+
+// Mirrors packages/a2a-server/src/lib/agentSigner.ts's env-var-per-category
+// pattern rather than importing it — apps/api and packages/a2a-server
+// don't currently share code in this direction. Worth unifying into one
+// shared package if a third caller ever needs this derivation; not worth
+// it yet for one.
+const ENV_KEY_BY_CATEGORY: Record<AgentCategory, string> = {
+  health_factor_monitoring: "AGENT_SIGNER_KEY_HEALTH_FACTOR",
+  rebalancing: "AGENT_SIGNER_KEY_REBALANCING",
+  grid_trading: "AGENT_SIGNER_KEY_GRID_TRADING",
+  yield_optimisation: "AGENT_SIGNER_KEY_YIELD_OPTIMISATION",
+};
+
+/**
+ * The public address the browser needs to include as `sessionSigner` when
+ * granting a session — derived from the same server-held key
+ * agentSigner.ts uses to actually execute later. The private key never
+ * leaves the server; only the address it corresponds to does.
+ */
+function sessionSignerAddressFor(category: AgentCategory): `0x${string}` | null {
+  const envKey = ENV_KEY_BY_CATEGORY[category];
+  const privateKey = process.env[envKey];
+  if (!privateKey) return null;
+  try {
+    return privateKeyToAccount(privateKey as `0x${string}`).address;
+  } catch {
+    return null;
+  }
 }

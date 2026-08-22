@@ -1,4 +1,5 @@
 import { Bound, CountdownBound, Button, Card } from "@rangebook/ui";
+import { WalletButton } from "../components/WalletButton";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8787";
 
@@ -94,7 +95,7 @@ export default async function MarketplacePage() {
           <a href="/permissions" className="hover:text-[var(--color-paper)]">
             Permissions
           </a>
-          <Button variant="ghost">Connect wallet</Button>
+          <WalletButton />
         </nav>
       </header>
 
