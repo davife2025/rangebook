@@ -88,6 +88,9 @@ export default async function MarketplacePage() {
           <a href="#agents" className="hover:text-[var(--color-paper)]">
             Agents
           </a>
+          <a href="/advantage-report" className="hover:text-[var(--color-paper)]">
+            Advantage Report
+          </a>
           <a href="/permissions" className="hover:text-[var(--color-paper)]">
             Permissions
           </a>

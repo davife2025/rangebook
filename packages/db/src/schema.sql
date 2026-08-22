@@ -100,10 +100,18 @@ create table advantage_report_tasks (
   with_agent_cost_usd numeric,
   with_agent_output text,            -- summary; attach full output as a linked file
   with_agent_output_url text,
+  with_agent_quality_score numeric check (with_agent_quality_score between 1 and 5),
   without_agent_time_seconds integer,
   without_agent_cost_usd numeric,
   without_agent_output text,
   without_agent_output_url text,
+  without_agent_quality_score numeric check (without_agent_quality_score between 1 and 5),
+  quality_rubric_notes text,         -- why each score landed where it did — see ADVANTAGE_REPORT_METHODOLOGY.md
+  -- Trading-specific: TermiX weights trading/stock/security tasks on a
+  -- real record (win rate, window, risk), not just the with/without pair
+  -- above — nullable, only meaningful when is_trading_stock_or_security.
+  win_rate_pct numeric,
+  risk_description text,
   window_start timestamptz,
   window_end timestamptz,
   notes text,

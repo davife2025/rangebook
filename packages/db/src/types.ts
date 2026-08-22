@@ -57,10 +57,15 @@ export interface AdvantageReportTask {
   with_agent_cost_usd: number | null;
   with_agent_output: string | null;
   with_agent_output_url: string | null;
+  with_agent_quality_score: number | null;
   without_agent_time_seconds: number | null;
   without_agent_cost_usd: number | null;
   without_agent_output: string | null;
   without_agent_output_url: string | null;
+  without_agent_quality_score: number | null;
+  quality_rubric_notes: string | null;
+  win_rate_pct: number | null;
+  risk_description: string | null;
   window_start: string | null;
   window_end: string | null;
   notes: string | null;

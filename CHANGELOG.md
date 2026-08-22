@@ -265,3 +265,41 @@ a zip is self-documenting on its own.
   still deferred to the Altana PancakeSwap Trading skill as in session 3
 - Same network caveat as every session — none of this has actually run,
   including the newly-confirmed contract calls
+
+## Session 7 — Agent Advantage Report tooling
+
+**Added**
+
+- `ADVANTAGE_REPORT_METHODOLOGY.md` — the protocol for all 4 tasks (3
+  required + Rebalancing as a bonus), written before any task is run:
+  same-starting-state rules, a 3-axis 1–5 quality rubric so "quality"
+  isn't a vibe, and exactly which of the four are actually runnable today
+  vs. still blocked on a session 3/6 gap
+- `advantage_report_tasks` schema — added quality-score fields (the brief
+  requires quality alongside time and cost; the table didn't have
+  anywhere to put it) and trading-specific fields (`win_rate_pct`,
+  `risk_description`) for the separate track-record criterion
+- `apps/api/src/routes/advantageReport.ts` — POST to create a task, PATCH
+  to fill in either arm's results as they finish (rarely simultaneous),
+  GET to list
+- `apps/web/app/advantage-report/page.tsx` — renders whatever's actually
+  in the table: a 3-task progress counter, a trading-task-recorded flag,
+  side-by-side time/cost/quality per task. Linked from the main nav
+
+**Deliberately not done**
+
+- No sample or placeholder results anywhere in this session — the report
+  page's empty state says exactly that, points at the methodology doc and
+  the API, and shows nothing that could be mistaken for a real number.
+  Task 1 (Grid Trading) and Task 4 (Rebalancing) are also explicitly
+  marked not-yet-runnable in the methodology doc itself, tied to the exact
+  gaps already flagged in sessions 3 and 6 — Tasks 2 and 3 (Yield,
+  Health Factor) are ready to run for real today
+
+**Not started yet**
+
+- Actually running any of the 4 tasks — needs a real environment same as
+  everything else
+- A downloadable/exportable version of the report (the live page may be
+  enough; a PDF export would be a small addition via the pdf skill later
+  if wanted)
