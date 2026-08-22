@@ -303,3 +303,35 @@ a zip is self-documenting on its own.
 - A downloadable/exportable version of the report (the live page may be
   enough; a PDF export would be a small addition via the pdf skill later
   if wanted)
+
+## Session 8 — consolidation, not new features
+
+No new agent logic this session. Seven sessions of diffs is real friction
+against actually running any of it for the first time, and `DEPLOY.md`
+had drifted — still written as if only Health Factor Monitoring existed,
+from session 2.
+
+**Changed**
+
+- `DEPLOY.md` — full rewrite covering all four agents, both processes
+  (`pnpm dev` / `pnpm dev:a2a`), position/grid registration, and the
+  Advantage Report — not just session 2's slice. Opens with a table of
+  what actually works today vs. what's still blocked, so that's known
+  before starting rather than discovered halfway through
+- `README.md`'s status section — was still describing session 1;
+  rewritten to the current, accurate picture in one place instead of
+  requiring a read through seven changelog entries to reconstruct it
+
+**Shipped as one full package, not a diff**
+
+This session's zip is the complete current tree, not a diff to stack —
+the point is exactly to remove the "apply 7 diffs correctly before you
+can even start" step. Sessions from here can go back to diffs against
+this as the new baseline.
+
+**Still true, unchanged by this session**
+
+Nothing here has actually run. Consolidating the paperwork doesn't
+substitute for the first real `pnpm install` and `grantSession` call —
+it just makes that first attempt have a fair chance of going smoothly
+instead of fighting stale docs on top of everything else.

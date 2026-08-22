@@ -43,52 +43,36 @@ That's what makes a session visible and revocable by the person whose funds
 are at stake. Don't build agents with their own separate "trading wallet" —
 see `packages/altana/src/session.ts` for the reasoning.
 
-## What's real vs. stubbed in this session
+## Status, as of session 7
 
-Real, complete code:
-- Monorepo tooling (pnpm + Turborepo), all package boundaries and types
-- Supabase schema (`packages/db/src/schema.sql`) with RLS policies
-- The marketplace landing page, fully designed and coded (`apps/web/app/page.tsx`)
-- The Altana session lifecycle wrapper, written against the SDK's documented
-  shape (`grantSession` / `execute` / `revokeSession`, Keystore-verified)
-- The category → skill mapping or `mayNot` boundaries for all four agents
+Real and working:
+- The full monorepo, schema (including position/grid tracking and the
+  Advantage Report tables), and the marketplace UI, all fetching real
+  data where a real source exists
+- Health Factor Monitoring and Yield Optimisation — complete, start to
+  finish, including the A2A path
+- Rebalancing's read side (`monitor.ts`) — confirmed this session against
+  PancakeSwap Infinity's real deployed contracts, not inferred
+- The A2A endpoint, all four skills routed, Agent Card cross-referencing
+  ERC-8004
+- `ADVANTAGE_REPORT_METHODOLOGY.md` — the protocol for the required report,
+  written before any task was run
 
-Stubbed, on purpose, for session 2+:
-- No agent is deployed yet — the Permissions dashboard and category stats
-  show sample-shaped data, clearly marked in code comments. Nothing here is
-  a real onchain number yet.
-- `packages/altana` has not been run — this environment has no network
-  access to `pnpm install` or hit testnet. Treat it as the contract to
-  verify on first real run, not as tested code.
-- Contract allowlist addresses are read from env, deliberately not
-  hardcoded — pull current addresses from the relevant skill file at
-  skills.altana.network before granting a real session, since PancakeSwap's
-  move to Infinity/Universal Router means old addresses will silently be
-  wrong.
-- ERC-8183 job fulfillment and the x402 sell endpoints aren't built yet —
-  next session, once one agent has a working session end to end.
+Explicitly still stubbed, each with the exact reason in its own file's
+comments rather than repeated here: Rebalancing's write
+(`rebalance.ts`), Grid Trading's execution (`execute.ts`), the x402
+payment gate, real key custody, real wallet connection. See the table in
+`DEPLOY.md` before assuming something's broken — most of what doesn't
+work yet is a known, named line, not an accident.
+
+Full session-by-session detail in `CHANGELOG.md`.
 
 ## Setup
 
-Needs a real, networked environment (this sandbox can't install packages or
-reach testnet) — Claude Code, or your own machine.
-
-```bash
-pnpm install
-cp .env.example .env   # fill in Supabase, Altana, 8004scan keys
-```
-
-Then, against a Supabase project:
-
-```bash
-supabase db push          # or paste packages/db/src/schema.sql into the SQL editor
-```
-
-Run everything:
-
-```bash
-pnpm dev   # turbo runs apps/web on :3000 and apps/api on :8787 together
-```
+See `DEPLOY.md` — it covers the whole system (all four agents, A2A,
+position/grid registration, the Advantage Report) and needs a real,
+networked environment; this sandbox can't install packages or reach
+testnet.
 
 ## Naming
 
