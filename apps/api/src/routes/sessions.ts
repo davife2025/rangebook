@@ -5,6 +5,26 @@ import type { AgentCategory } from "@rangebook/db";
 
 export const sessionsRoute = new Hono();
 
+// GET /sessions?wallet=0x...
+// Reads sessions_cache for instant paint. The dashboard re-verifies each
+// one against Keystore (isSessionValid) before treating "revoke" as safe to
+// show as actionable — this endpoint alone is not that check.
+sessionsRoute.get("/", async (c) => {
+  const wallet = c.req.query("wallet");
+  if (!wallet) return c.json({ error: "wallet query param is required" }, 400);
+
+  const db = createServerClient();
+  const { data, error } = await db
+    .from("sessions_cache")
+    .select("*, agents(name, category)")
+    .eq("user_wallet_address", wallet)
+    .is("revoked_at", null)
+    .order("created_at", { ascending: false });
+
+  if (error) return c.json({ error: error.message }, 500);
+  return c.json({ sessions: data });
+});
+
 interface ActivateBody {
   category: AgentCategory;
   agentId: string;

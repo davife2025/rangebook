@@ -79,6 +79,30 @@ export async function isSessionValid(sessionKeyAddress: `0x${string}`): Promise<
   return altana.keystore.isValidKey(sessionKeyAddress);
 }
 
+export interface ExecuteViaSessionParams {
+  sessionKeyAddress: `0x${string}`;
+  sessionSigner: unknown; // the agent's own key for this session — never the user's admin key
+  calls: { to: `0x${string}`; data: `0x${string}`; value?: bigint }[];
+}
+
+/**
+ * How every agent actually acts, after activation: calls out through an
+ * already-granted session rather than requesting a new one. Reverts
+ * on-chain at validation if `calls` reaches outside what was granted —
+ * there's no separate check to remember to write here.
+ */
+export async function executeViaSession(
+  params: ExecuteViaSessionParams,
+): Promise<{ txHash: `0x${string}` }> {
+  const altana = client();
+  const result = await altana.execute({
+    sessionKey: params.sessionKeyAddress,
+    signer: params.sessionSigner,
+    calls: params.calls,
+  });
+  return { txHash: result.txHash };
+}
+
 function requireEnv(name: string): string {
   const value = process.env[name];
   if (!value) throw new Error(`Missing required env var: ${name}`);

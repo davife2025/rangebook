@@ -41,3 +41,38 @@ a zip is self-documenting on its own.
 - `apps/api` routes are unrun — first real target for session 2
 - ERC-8183 job fulfillment, x402 sell endpoints
 - Agent Advantage Report tasks (schema exists, no data)
+
+## Session 2 — Health Factor Monitoring, real logic
+
+**Added**
+
+- `packages/agent-health-factor` — new package: `monitor.ts` (real Aave V3
+  health-factor read; Venus explicitly left unimplemented, see the comment
+  above `checkVenusAccountLiquidity` for why it's not a drop-in swap),
+  `defend.ts` (repay through the session), `task.ts`
+  (`fulfillAuditJob` — the ERC-8183 job handler, matching Altana's own
+  example task almost verbatim), `cli-check.ts` (manual smoke test)
+- `AGENT_BRIEF.md` — the literal brief to paste into Cursor per Agent
+  Studio's documented workflow
+- `DEPLOY.md` — full runbook, testnet faucet through first real session
+
+**Changed**
+
+- `packages/altana/src/session.ts` — added `executeViaSession`, missing
+  from session 1; this is what every agent's actual action runs through
+  after activation
+- `apps/api/src/routes/sessions.ts` — added `GET /sessions?wallet=`, needed
+  by the dashboard and missing from session 1
+- `apps/web/app/permissions/page.tsx` — rebuilt as a real client component:
+  fetches live sessions, wires Revoke to the actual endpoint. Wallet
+  connection itself is still a text-input stand-in, not a real connect flow
+
+**Not started yet**
+
+- Real wallet connection (Altana/wagmi) — Permissions page takes a pasted
+  address for now
+- Venus support in `monitor.ts`
+- Precise repay sizing in `task.ts` — currently a fixed conservative step,
+  not a computed optimum (see the comment on `fulfillAuditJob`)
+- Nothing in this session has actually run — same network caveat as
+  session 1
