@@ -42,3 +42,27 @@ export function buildEvenGrid(
   });
   return { levels, pair };
 }
+
+/**
+ * The slippage guard for a triggered level's swap. Uses floating point on
+ * purpose — this produces an approximate minimum, which is what
+ * amountOutMin is supposed to be, not the precise on-chain amount. Callers
+ * pass real decimals explicitly rather than this function assuming 18 —
+ * BSC's BEP-20 USDT genuinely is 18 decimals (unlike Ethereum's 6, a
+ * common trap), but "genuinely is" here means reasonably confident, not
+ * independently re-verified this session — check before trusting it for
+ * a token this hasn't been exercised against.
+ */
+export function computeAmountOutMin(params: {
+  amountIn: bigint;
+  price: number; // quote per base
+  side: "buy" | "sell";
+  decimalsIn: number;
+  decimalsOut: number;
+  slippageBps: number;
+}): bigint {
+  const amountInFloat = Number(params.amountIn) / 10 ** params.decimalsIn;
+  const expectedOutFloat = params.side === "buy" ? amountInFloat / params.price : amountInFloat * params.price;
+  const minOutFloat = expectedOutFloat * (1 - params.slippageBps / 10_000);
+  return BigInt(Math.floor(minOutFloat * 10 ** params.decimalsOut));
+}

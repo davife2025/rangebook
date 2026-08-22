@@ -20,7 +20,11 @@ Build an agent called **Rangebook Grid Trader** that:
   category where latency matters.
 
 The grid state machine already exists and is correct at
-`packages/agent-grid-trading/src/grid.ts`. The actual swap execution is
-NOT written yet — build it via the Altana PancakeSwap Trading skill
-(Universal Router command encoding, done and fork-tested there), not by
-hand-rolling Universal Router calls from memory.
+`packages/agent-grid-trading/src/grid.ts`. The swap execution is real as
+of this session too — command bytes confirmed against PancakeSwap's own
+`infinity-universal-router` source. Two things to check before this runs
+for real, not assume are handled: the wallet needs a one-time `approve()`
+to Permit2 before `PERMIT2_TRANSFER_FROM` can pull anything, and
+`V2_SWAP_EXACT_IN`'s exact field count should be checked against
+PancakeSwap's own `V2SwapRouter.sol` rather than trusted purely on
+Uniswap's — see the comment on `executeLevel` for the full reasoning.

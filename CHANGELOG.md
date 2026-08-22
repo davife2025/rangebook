@@ -335,3 +335,47 @@ Nothing here has actually run. Consolidating the paperwork doesn't
 substitute for the first real `pnpm install` and `grantSession` call —
 it just makes that first attempt have a fair chance of going smoothly
 instead of fighting stale docs on top of everything else.
+
+## Session 9 — Grid Trading's execution, the highest-leverage remaining gap
+
+Per the session-7/8 review: this was the one piece blocking the required
+trading task, the win-rate track record, and the last DeFi write path.
+
+**Upgraded from stub to real**
+
+- `packages/agent-grid-trading/src/execute.ts` — `executeLevel` now
+  actually encodes and sends a Universal Router swap. Three different
+  confidence levels here, kept distinct rather than presented as equally
+  certain: command bytes (`V2_SWAP_EXACT_IN`, `PERMIT2_TRANSFER_FROM`)
+  confirmed directly against `pancakeswap/infinity-universal-router`'s
+  own `Commands.sol` on GitHub; `PERMIT2_TRANSFER_FROM`'s input shape
+  confirmed against Uniswap's current `Dispatcher.sol`;
+  `V2_SWAP_EXACT_IN`'s exact field list matches Uniswap's current
+  `V2SwapRouter.sol` but wasn't independently re-checked against
+  PancakeSwap's own fork, which could plausibly lag it
+- `packages/agent-grid-trading/src/grid.ts` — added `computeAmountOutMin`,
+  the slippage-guard math feeding the swap; takes decimals as required
+  input rather than assuming 18, since BSC's BEP-20 USDT being 18
+  decimals (unlike Ethereum's 6) is exactly the kind of assumption worth
+  not hardcoding
+- `packages/agent-grid-trading/src/task.ts` — `fulfillGridJob` is real
+  end to end now: decide → size the guard → execute, no more stub in the
+  middle
+- `packages/a2a-server/src/rangebookExecutor.ts` — `run-grid` passes the
+  wallet address and requires decimals explicitly via message metadata
+  rather than guessing them
+
+**One real, separate gap surfaced by finishing this — not solved here**
+
+`PERMIT2_TRANSFER_FROM` only pulls tokens Permit2 already has an
+allowance for. That's a one-time `approve()` from the wallet to Permit2 —
+doesn't happen automatically, isn't part of the Altana session grant, and
+isn't performed by this code. Needs to happen once, out of band, before
+Grid Trading's first real swap.
+
+**What this closes**
+
+Grid Trading can now run for real, which means: the required trading
+task for the Advantage Report is unblocked, the win-rate track record
+TermiX weights becomes producible, and three of four agents are fully
+real end to end (only Rebalancing's write remains stubbed).

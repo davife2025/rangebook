@@ -179,14 +179,34 @@ export class RangebookExecutor implements AgentExecutor {
           return;
         }
 
+        const currentPrice = Number(userMessage.metadata?.currentPrice ?? NaN);
+        const baseDecimals = userMessage.metadata?.baseDecimals;
+        const quoteDecimals = userMessage.metadata?.quoteDecimals;
+        if (Number.isNaN(currentPrice) || typeof baseDecimals !== "number" || typeof quoteDecimals !== "number") {
+          this.fail(
+            eventBus,
+            taskId,
+            contextId,
+            "run-grid needs metadata.currentPrice, metadata.baseDecimals, and metadata.quoteDecimals — " +
+              "decimals aren't guessed here since a wrong guess sizes a real trade wrong, not just a display value.",
+          );
+          return;
+        }
+
         try {
           const result = await fulfillGridJob({
-            config: { levels: config.levels, pair: { base: config.base_token as `0x${string}`, quote: config.quote_token as `0x${string}` } },
-            currentPrice: Number(userMessage.metadata?.currentPrice ?? NaN),
+            config: {
+              levels: config.levels,
+              pair: { base: config.base_token as `0x${string}`, quote: config.quote_token as `0x${string}` },
+            },
+            currentPrice,
             sessionKeyAddress: session.sessionKeyAddress,
             sessionSigner: signer,
+            walletAddress: targetWallet,
             universalRouterAddress: config.universal_router_address as `0x${string}`,
             amountPerLevel: BigInt(config.amount_per_level),
+            baseDecimals,
+            quoteDecimals,
           });
           this.completeWithArtifact(eventBus, taskId, contextId, "grid-result", result);
         } catch (err) {
