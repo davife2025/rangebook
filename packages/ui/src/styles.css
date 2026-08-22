@@ -1,0 +1,109 @@
+/* --- Bound ------------------------------------------------------------ */
+
+.rb-bound {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 2px;
+  line-height: 1;
+}
+
+.rb-bound-label {
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--color-mist);
+}
+
+.rb-bound-value {
+  position: relative;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 2px;
+  font-family: var(--font-data);
+  font-size: 20px;
+  font-weight: 500;
+  color: var(--color-paper);
+  white-space: nowrap;
+}
+
+.rb-bound-bracket {
+  color: var(--color-brass);
+  font-weight: 600;
+}
+
+.rb-bound-live {
+  width: 6px;
+  height: 6px;
+  margin-left: 6px;
+  border-radius: 999px;
+  background: var(--color-signal);
+  animation: rb-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes rb-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* --- Card --------------------------------------------------------------- */
+
+.rb-card {
+  background: var(--color-slate);
+  border: 1px solid var(--color-rule);
+  border-radius: var(--radius-md);
+  padding: 20px;
+}
+
+/* --- Button --------------------------------------------------------------- */
+
+.rb-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 600;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+
+.rb-btn:focus-visible {
+  outline: 2px solid var(--color-signal);
+  outline-offset: 2px;
+}
+
+.rb-btn-primary {
+  background: var(--color-brass);
+  color: var(--color-ink);
+}
+.rb-btn-primary:hover {
+  background: var(--color-brass-dim);
+}
+
+.rb-btn-ghost {
+  background: transparent;
+  border-color: var(--color-rule);
+  color: var(--color-paper);
+}
+.rb-btn-ghost:hover {
+  border-color: var(--color-mist);
+}
+
+.rb-btn-danger {
+  background: transparent;
+  border-color: var(--color-negative);
+  color: var(--color-negative);
+}
+.rb-btn-danger:hover {
+  background: rgba(248, 113, 113, 0.1);
+}

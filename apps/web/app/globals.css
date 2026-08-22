@@ -1,0 +1,18 @@
+@import "tailwindcss";
+@import "@rangebook/ui/src/tokens.css";
+@import "@rangebook/ui/src/styles.css";
+
+body {
+  background: var(--color-ink);
+  color: var(--color-paper);
+  font-family: var(--font-body);
+}
+
+::selection {
+  background: var(--color-brass);
+  color: var(--color-ink);
+}
+
+a {
+  color: inherit;
+}
