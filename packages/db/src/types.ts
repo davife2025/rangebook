@@ -67,6 +67,36 @@ export interface AdvantageReportTask {
   created_at: string;
 }
 
+export interface RebalancingPosition {
+  id: string;
+  agent_id: string;
+  user_wallet_address: string;
+  position_token_id: string;
+  position_manager_address: string;
+  range_width_ticks: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface GridLevelRow {
+  price: number;
+  side: "buy" | "sell";
+  filled: boolean;
+}
+
+export interface GridConfigRow {
+  id: string;
+  agent_id: string;
+  user_wallet_address: string;
+  base_token: string;
+  quote_token: string;
+  universal_router_address: string;
+  levels: GridLevelRow[];
+  amount_per_level: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface UserProfile {
   id: string;
   altana_wallet_address: string | null;
@@ -86,6 +116,12 @@ export interface Database {
         Update: Partial<AdvantageReportTask>;
       };
       user_profiles: { Row: UserProfile; Insert: Partial<UserProfile>; Update: Partial<UserProfile> };
+      rebalancing_positions: {
+        Row: RebalancingPosition;
+        Insert: Partial<RebalancingPosition>;
+        Update: Partial<RebalancingPosition>;
+      };
+      grid_configs: { Row: GridConfigRow; Insert: Partial<GridConfigRow>; Update: Partial<GridConfigRow> };
     };
   };
 }

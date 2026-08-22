@@ -3,6 +3,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { agentsRoute } from "./routes/agents";
 import { sessionsRoute } from "./routes/sessions";
+import { positionsRoute } from "./routes/positions";
 import { refreshAgentMetrics } from "./jobs/refreshMetrics";
 
 const app = new Hono();
@@ -18,6 +19,7 @@ app.get("/health", (c) => c.json({ ok: true, service: "rangebook-api" }));
 
 app.route("/agents", agentsRoute);
 app.route("/sessions", sessionsRoute);
+app.route("/positions", positionsRoute);
 
 // Manual trigger — useful for testing the refresh without waiting on the
 // interval below, e.g. right after deploying an agent.

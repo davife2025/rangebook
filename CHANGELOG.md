@@ -218,3 +218,50 @@ a zip is self-documenting on its own.
   (grid trading) — both block their respective A2A skills and their
   original marketplace flows equally
 - The real `@altananetwork/x402-server` Express wiring
+
+## Session 6 — closing the two storage gaps, and a real research payoff
+
+**Added**
+
+- `rebalancing_positions`, `grid_configs` tables — the "whose position /
+  whose grid is this" state that was missing, with matching types and
+  shared lookups in `packages/db/src/lookups.ts` (used by both apps/api
+  and packages/a2a-server, rather than duplicated in each)
+- `POST/GET /positions/rebalancing`, `POST/GET /positions/grid` — the
+  intake API for both
+
+**Upgraded from stub to real — sourced this session, not assumed**
+
+- `packages/agent-rebalancing/src/monitor.ts`'s `readPosition` now
+  actually reads a live Infinity position. Confirmed against
+  `pancakeswap/infinity-periphery`'s actual `CLPositionManager.sol` source
+  on GitHub (`positions(tokenId)`'s real return signature) and against the
+  deployed `CLPoolManager`'s verified ABI on BscScan
+  (`0x32C59D556B16DB81DFc32525eFb3CB257f7e493d`) for `getSlot0`. One piece
+  stays an explicit inference rather than a sourced fact: `computePoolId`
+  assumes Solidity's `PoolIdLibrary.toId()` is `keccak256` of the
+  abi-encoded `PoolKey` struct (the standard V4 pattern Infinity is
+  documented as following) — flagged in the code as the first thing to
+  check if a read comes back wrong, since I haven't seen
+  `PoolIdLibrary.sol`'s actual source directly.
+- `packages/agent-rebalancing/src/task.ts` — `fulfillRebalanceJob` now
+  calls `readPosition` internally instead of taking pre-resolved state,
+  matching how every other task handler owns its own read step
+- `packages/a2a-server/src/rangebookExecutor.ts` — `rebalance-liquidity`
+  and `run-grid` now genuinely attempt the work (tracked-position lookup →
+  real read → real range check) instead of failing unconditionally. They
+  still fail where a real gap remains — `rebalance()`'s write and
+  `executeLevel`'s swap encoding — but that failure is now the actual
+  edge of what's built, not a placeholder for the whole skill
+
+**Still not implemented, unchanged**
+
+- `rebalance()`'s write — `CLPositionManager.modifyLiquidities`'s action
+  encoding (the Solidity-side "Planner" pattern) is a different, separate
+  piece of work from the read that just got solved. Comment in
+  `rebalance.ts` sharpened to be specific about this now that the read
+  side isn't lumped in with it anymore.
+- Grid Trading's swap execution — no new research done here this session;
+  still deferred to the Altana PancakeSwap Trading skill as in session 3
+- Same network caveat as every session — none of this has actually run,
+  including the newly-confirmed contract calls

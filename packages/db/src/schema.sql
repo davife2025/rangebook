@@ -12,7 +12,7 @@ create type agent_category as enum (
   'health_factor_monitoring'
 );
 
--- One row per deployed agent (one per category, to start).
+-- One per deployed agent (one per category, to start).
 create table agents (
   id uuid primary key default uuid_generate_v4(),
   category agent_category not null,
@@ -59,6 +59,36 @@ create table sessions_cache (
 );
 create index sessions_cache_user_idx on sessions_cache(user_wallet_address);
 
+-- Rebalancing: which LP position a session is allowed to manage. Solves
+-- "we don't know whose position this is" — separate from, and in addition
+-- to, the actual Infinity chain calls (see packages/agent-rebalancing).
+create table rebalancing_positions (
+  id uuid primary key default uuid_generate_v4(),
+  agent_id uuid not null references agents(id),
+  user_wallet_address text not null,
+  position_token_id text not null,        -- PancakeSwap Infinity CL position NFT id
+  position_manager_address text not null, -- CLPositionManager for the deployment this position is on
+  range_width_ticks integer not null default 2000,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (user_wallet_address, position_token_id)
+);
+
+-- Grid Trading: the grid a session is allowed to run. Same story — this is
+-- state storage, not the swap execution itself.
+create table grid_configs (
+  id uuid primary key default uuid_generate_v4(),
+  agent_id uuid not null references agents(id),
+  user_wallet_address text not null,
+  base_token text not null,
+  quote_token text not null,
+  universal_router_address text not null,
+  levels jsonb not null,              -- [{price, side, filled}], see packages/agent-grid-trading/src/grid.ts
+  amount_per_level numeric not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 -- The TermiX-required Agent Advantage Report: >=3 real tasks, run both ways.
 create table advantage_report_tasks (
   id uuid primary key default uuid_generate_v4(),
@@ -93,6 +123,8 @@ alter table agent_metrics enable row level security;
 alter table sessions_cache enable row level security;
 alter table advantage_report_tasks enable row level security;
 alter table user_profiles enable row level security;
+alter table rebalancing_positions enable row level security;
+alter table grid_configs enable row level security;
 
 -- Agents, metrics, and the advantage report are public marketplace data.
 create policy "agents are publicly readable" on agents for select using (true);
@@ -106,6 +138,10 @@ create policy "users read their own profile" on user_profiles
   for select using (auth.uid() = id);
 create policy "users update their own profile" on user_profiles
   for update using (auth.uid() = id);
+create policy "users manage their own tracked positions" on rebalancing_positions
+  for all using (auth.jwt() ->> 'wallet_address' = user_wallet_address);
+create policy "users manage their own grid configs" on grid_configs
+  for all using (auth.jwt() ->> 'wallet_address' = user_wallet_address);
 
 -- Writes to agents/metrics/sessions_cache go through apps/api using the
 -- service role key, which bypasses RLS by design — never expose that key

@@ -1,7 +1,10 @@
 import { v4 as uuidv4 } from "uuid";
 import type { AgentExecutor, RequestContext, ExecutionEventBus } from "@a2a-js/sdk/server";
 import type { Task, TaskStatusUpdateEvent, TaskArtifactUpdateEvent, Message } from "@a2a-js/sdk";
+import { getTrackedPosition, getGridConfig } from "@rangebook/db";
 import { fulfillAuditJob } from "@rangebook/agent-health-factor";
+import { fulfillRebalanceJob } from "@rangebook/agent-rebalancing";
+import { fulfillGridJob } from "@rangebook/agent-grid-trading";
 import { getAaveSupplyApr, getVenusSupplyApr, fulfillYieldJob } from "@rangebook/agent-yield-optimisation";
 import { resolveSkill, extractWalletAddress, SKILL_TO_CATEGORY, type SkillId } from "./skillRouter";
 import { getActiveSessionForWallet } from "./lib/sessionLookup";
@@ -129,34 +132,71 @@ export class RangebookExecutor implements AgentExecutor {
         return;
       }
 
-      case "rebalance-liquidity":
-        // Same gap as packages/agent-rebalancing/src/monitor.ts:readPosition
-        // — Infinity's CLPositionManager read isn't implemented, and on top
-        // of that, this repo doesn't yet track *which* position (tokenId)
-        // belongs to which wallet. Two real gaps, not one — both need
-        // solving before this skill can run, not just the chain call.
-        this.fail(
-          eventBus,
-          taskId,
-          contextId,
-          "Rebalancing isn't wired up yet: no LP position tracking exists, and the Infinity " +
-            "CLPositionManager read is still a documented stub in packages/agent-rebalancing.",
-        );
-        return;
+      case "rebalance-liquidity": {
+        const tracked = await getTrackedPosition(targetWallet);
+        if (!tracked) {
+          this.fail(
+            eventBus,
+            taskId,
+            contextId,
+            `No LP position is tracked for ${targetWallet} yet — set one up at rangebook.xyz first ` +
+              `(POST /positions/rebalancing). Reading and checking a position is real once one is tracked; ` +
+              `only the actual rebalance write is still a documented stub in packages/agent-rebalancing.`,
+          );
+          return;
+        }
 
-      case "run-grid":
-        // Same story: packages/agent-grid-trading/src/execute.ts defers the
-        // actual swap to the Altana skill on purpose, and there's no
-        // storage yet for a wallet's grid configuration or a live price
-        // feed to check it against.
-        this.fail(
-          eventBus,
-          taskId,
-          contextId,
-          "Grid trading isn't wired up yet: no grid configuration storage exists, and the swap " +
-            "execution is still a documented stub in packages/agent-grid-trading.",
-        );
+        try {
+          const result = await fulfillRebalanceJob({
+            positionTokenId: BigInt(tracked.position_token_id),
+            positionManagerAddress: tracked.position_manager_address as `0x${string}`,
+            rangeWidthTicks: tracked.range_width_ticks,
+            sessionKeyAddress: session.sessionKeyAddress,
+            sessionSigner: signer,
+          });
+          this.completeWithArtifact(eventBus, taskId, contextId, "rebalance-result", result);
+        } catch (err) {
+          // Expected to land here whenever checkRange finds the position
+          // out of range — rebalance() itself still throws on purpose
+          // (see packages/agent-rebalancing/src/rebalance.ts). A position
+          // that's in range completes normally above; this only fires on
+          // the genuinely unbuilt path.
+          this.fail(eventBus, taskId, contextId, err instanceof Error ? err.message : "Unknown error");
+        }
         return;
+      }
+
+      case "run-grid": {
+        const config = await getGridConfig(targetWallet);
+        if (!config) {
+          this.fail(
+            eventBus,
+            taskId,
+            contextId,
+            `No grid is configured for ${targetWallet} yet — set one up at rangebook.xyz first ` +
+              `(POST /positions/grid).`,
+          );
+          return;
+        }
+
+        try {
+          const result = await fulfillGridJob({
+            config: { levels: config.levels, pair: { base: config.base_token as `0x${string}`, quote: config.quote_token as `0x${string}` } },
+            currentPrice: Number(userMessage.metadata?.currentPrice ?? NaN),
+            sessionKeyAddress: session.sessionKeyAddress,
+            sessionSigner: signer,
+            universalRouterAddress: config.universal_router_address as `0x${string}`,
+            amountPerLevel: BigInt(config.amount_per_level),
+          });
+          this.completeWithArtifact(eventBus, taskId, contextId, "grid-result", result);
+        } catch (err) {
+          // Fires either for a missing/invalid currentPrice, or — once a
+          // level genuinely triggers — for executeLevel's still-unbuilt
+          // Universal Router encoding (packages/agent-grid-trading).
+          this.fail(eventBus, taskId, contextId, err instanceof Error ? err.message : "Unknown error");
+        }
+        return;
+      }
     }
   }
 
