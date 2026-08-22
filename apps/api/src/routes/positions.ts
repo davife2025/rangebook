@@ -61,7 +61,7 @@ positionsRoute.post("/grid", async (c) => {
     quoteToken: string;
     universalRouterAddress: string;
     levels: { price: number; side: "buy" | "sell"; filled: boolean }[];
-    amountPerLevel: number;
+    amountPerLevel: string; // raw smallest-unit integer, sent as a string to avoid precision loss — see ActivateForm.tsx
   }>();
 
   const db = createServerClient();

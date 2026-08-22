@@ -36,6 +36,7 @@ export function ActivateForm(props: ActivateFormProps) {
   const [ceiling, setCeiling] = useState("");
   const [levelCount, setLevelCount] = useState("6");
   const [amountPerLevel, setAmountPerLevel] = useState("");
+  const [amountDecimals, setAmountDecimals] = useState("18");
 
   async function handleActivate() {
     if (!wallet.address || !wallet.client) return;
@@ -81,6 +82,13 @@ export function ActivateForm(props: ActivateFormProps) {
           base: baseToken as `0x${string}`,
           quote: quoteToken as `0x${string}`,
         });
+        // Stored as a raw smallest-unit integer, same as everywhere else
+        // this repo handles token amounts (see HEALTH_FACTOR_REPAY_STEP in
+        // packages/agent-yield-optimisation/src/task.ts for the same
+        // pattern) — the form collects a human-scale number, this is
+        // where that gets converted, not left for whatever reads it later
+        // to guess.
+        const amountPerLevelRaw = BigInt(Math.floor(Number(amountPerLevel) * 10 ** Number(amountDecimals)));
         const res = await fetch(`${API_URL}/positions/grid`, {
           method: "POST",
           headers: { "content-type": "application/json" },
@@ -91,7 +99,7 @@ export function ActivateForm(props: ActivateFormProps) {
             quoteToken,
             universalRouterAddress: props.universalRouterAddress,
             levels: config.levels,
-            amountPerLevel: Number(amountPerLevel),
+            amountPerLevel: amountPerLevelRaw.toString(),
           }),
         });
         if (!res.ok) throw new Error("Couldn't register the grid.");
@@ -197,6 +205,7 @@ export function ActivateForm(props: ActivateFormProps) {
               <input value={ceiling} onChange={(e) => setCeiling(e.target.value)} placeholder="Ceiling price" style={inputStyle} className="rounded-md px-3 py-2 text-sm" />
               <input value={levelCount} onChange={(e) => setLevelCount(e.target.value)} placeholder="Levels" style={inputStyle} className="rounded-md px-3 py-2 text-sm" />
               <input value={amountPerLevel} onChange={(e) => setAmountPerLevel(e.target.value)} placeholder="Amount per level" style={inputStyle} className="rounded-md px-3 py-2 text-sm" />
+              <input value={amountDecimals} onChange={(e) => setAmountDecimals(e.target.value)} placeholder="Decimals (18 for most BEP-20)" style={inputStyle} className="col-span-2 rounded-md px-3 py-2 text-sm" />
             </div>
           )}
 

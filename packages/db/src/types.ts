@@ -97,7 +97,11 @@ export interface GridConfigRow {
   quote_token: string;
   universal_router_address: string;
   levels: GridLevelRow[];
-  amount_per_level: number;
+  amount_per_level: string; // raw smallest-unit integer as text — whether Supabase-js
+  // returns numeric columns as string or number for values this large isn't confirmed;
+  // typing it as string is the safe assumption. BigInt() accepts either at the one
+  // call site that consumes this (rangebookExecutor.ts), so this doesn't need to be
+  // "fixed" so much as not quietly promising more precision than is confirmed.
   created_at: string;
   updated_at: string;
 }

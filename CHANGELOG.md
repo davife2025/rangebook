@@ -463,3 +463,42 @@ scoping before trusting this past testnet.
   current skill file" rule as everywhere else
 - No loading/success state polish beyond the basics
 - Same network caveat as every session — none of this has run
+
+## Session 12 — cross-session consistency checks, and a units bug from last session
+
+Two targeted checks past the general audit style of session 10, plus one
+real bug found in code from earlier the same day it was written.
+
+**Checked, clean**
+
+- The public address `apps/api` exposes during activation (what the
+  browser includes in `grantSession`) and the address
+  `packages/a2a-server` later derives to actually execute against that
+  session — both read the exact same `AGENT_SIGNER_KEY_*` env vars
+  through the same derivation. A mismatch here would have been silent
+  and ugly: activation "succeeding" while every later execution attempt
+  failed with an unauthorized-key error. It doesn't mismatch.
+- The position/grid data shape written by `ActivateForm` and the shape
+  read by `rangebookExecutor.ts` — consistent end to end.
+
+**Found and fixed — introduced in session 11, caught the same day**
+
+`ActivateForm`'s grid `amountPerLevel` field sent a plain human-scale
+number with no decimals conversion, while every downstream consumer
+(`executeLevel`, the same raw-smallest-unit pattern
+`HEALTH_FACTOR_REPAY_STEP` uses) treats this value as an already-raw
+integer. Someone entering "10" meaning 10 tokens would have silently
+registered a grid trading 10 × 10⁻¹⁸ tokens per level — no error, just
+a grid that does nothing. Fixed by adding a decimals input and
+converting to raw units before the value ever leaves the form; the
+schema and every reader downstream were already correct; only the form
+was wrong.
+
+**Type precision, tightened alongside the fix**
+
+`grid_configs.amount_per_level` is now typed as a string end to end
+(form → API → stored type), not a JS `number` — large raw-unit integers
+can exceed `Number.MAX_SAFE_INTEGER`, and whether Supabase-js returns
+large `numeric` columns as a string or a number isn't confirmed. Typing
+it as a string doesn't quietly promise precision that hasn't been
+verified.
