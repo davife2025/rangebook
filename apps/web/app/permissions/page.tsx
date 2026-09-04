@@ -118,39 +118,3 @@ export default function PermissionsPage() {
     </div>
   );
 }
-
-        {sessions?.length === 0 && (
-          <p className="text-sm" style={{ color: "var(--color-mist)" }}>
-            No active agents for this wallet.
-          </p>
-        )}
-
-        {sessions?.map((session) => (
-          <Card key={session.id} className="flex items-center justify-between gap-6">
-            <div className="flex flex-col gap-3">
-              <p className="font-medium">
-                {session.agents?.name ?? "Unknown agent"}
-                <span className="ml-2 text-xs" style={{ color: "var(--color-mist)" }}>
-                  {session.session_key_address.slice(0, 10)}…
-                </span>
-              </p>
-              <div className="flex gap-6">
-                {session.spend_limit && (
-                  <Bound kind="cap" value={`${session.spend_limit} ${session.spend_token}/${session.spend_period}`} />
-                )}
-                <CountdownBound expiresAt={new Date(session.expires_at)} />
-              </div>
-            </div>
-            <Button
-              variant="danger"
-              disabled={revokingId === session.id}
-              onClick={() => handleRevoke(session.session_key_address, session.id)}
-            >
-              {revokingId === session.id ? "Revoking…" : "Revoke"}
-            </Button>
-          </Card>
-        ))}
-      </div>
-    </div>
-  );
-}

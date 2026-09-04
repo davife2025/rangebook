@@ -46,16 +46,11 @@ export function buildEvenGrid(
 /**
  * The slippage guard for a triggered level's swap. Uses floating point on
  * purpose — this produces an approximate minimum, which is what
- * amountOutMin is supposed to be, not the precise on-chain amount. Callers
- * pass real decimals explicitly rather than this function assuming 18 —
- * BSC's BEP-20 USDT genuinely is 18 decimals (unlike Ethereum's 6, a
- * common trap), but "genuinely is" here means reasonably confident, not
- * independently re-verified this session — check before trusting it for
- * a token this hasn't been exercised against.
+ * amountOutMin is supposed to be, not the precise on-chain amount.
  */
 export function computeAmountOutMin(params: {
   amountIn: bigint;
-  price: number; // quote per base
+  price: number;
   side: "buy" | "sell";
   decimalsIn: number;
   decimalsOut: number;

@@ -23,7 +23,6 @@ const universalRouterAbi = [
 ] as const;
 
 export interface ExecuteLevelParams {
-  sessionKeyAddress: `0x${string}`;
   sessionSigner: unknown;
   walletAddress: `0x${string}`; // receives the swap output — the session key itself holds nothing
   universalRouterAddress: `0x${string}`;
@@ -36,9 +35,11 @@ export interface ExecuteLevelParams {
 }
 
 /**
- * Real as of this session, with one confirmed piece, one reasonably
- * confident piece, and one genuinely open gap — worth keeping those
- * separate rather than presenting them as equally certain:
+ * Real as of session 9, with one confirmed piece and one reasonably
+ * confident piece kept distinct rather than presented as equally certain.
+ * A third thing flagged as unsolved when this was written has since been
+ * resolved elsewhere — Permit2 approval now happens in ActivateForm.tsx
+ * during activation, not here.
  *
  * CONFIRMED this session: the command bytes (V2_SWAP_EXACT_IN,
  * PERMIT2_TRANSFER_FROM) against PancakeSwap's own Commands.sol, and
@@ -48,41 +49,29 @@ export interface ExecuteLevelParams {
  * REASONABLY CONFIDENT, not independently verified against PancakeSwap's
  * own source: V2_SWAP_EXACT_IN's input struct below (recipient, amountIn,
  * amountOutMin, path, payerIsUser, minHopPriceX36) matches Uniswap's
- * current main-branch V2SwapRouter.sol, fetched fresh this session — but
- * that's Uniswap's repo, not PancakeSwap's fork directly, and forks can
- * lag the field list they forked from (older Uniswap versions had 5
- * fields, no minHopPriceX36). A decode-length revert here is the first
- * thing to check against PancakeSwap's own V2SwapRouter.sol.
- *
- * GENUINELY UNSOLVED: PERMIT2_TRANSFER_FROM only pulls tokens Permit2
- * already has an allowance for. That allowance is a one-time approve()
- * from the wallet to Permit2 — real, necessary setup this function
- * doesn't perform, and that isn't part of the Altana session grant
- * either. Needs to happen once, out of band, before this runs for real.
+ * current main-branch V2SwapRouter.sol — but that's Uniswap's repo, not
+ * PancakeSwap's fork directly, and forks can lag the field list they
+ * forked from. A decode-length revert here is the first thing to check
+ * against PancakeSwap's own V2SwapRouter.sol.
  */
 export async function executeLevel(params: ExecuteLevelParams): Promise<{ txHash: `0x${string}` }> {
   const deadline = BigInt(Math.floor(Date.now() / 1000) + (params.deadlineSeconds ?? 300));
 
   const commands = encodePacked(["uint8", "uint8"], [PERMIT2_TRANSFER_FROM, V2_SWAP_EXACT_IN]);
 
-  // Step 1: pull tokenIn from the wallet into the router itself, via
-  // Permit2's pre-existing allowance.
   const permit2TransferInput = encodeAbiParameters(
     [{ type: "address" }, { type: "address" }, { type: "uint160" }],
     [params.tokenIn, params.universalRouterAddress, params.amountIn],
   );
 
-  // Step 2: swap using the balance the router just received in step 1 —
-  // payerIsUser is false because the payer for this step is the router
-  // itself, not a fresh pull from the caller.
   const v2SwapInput = encodeAbiParameters(
     [
-      { type: "address" }, // recipient
-      { type: "uint256" }, // amountIn
-      { type: "uint256" }, // amountOutMin
-      { type: "address[]" }, // path
-      { type: "bool" }, // payerIsUser
-      { type: "uint256[]" }, // minHopPriceX36 — empty disables per-hop price limits
+      { type: "address" },
+      { type: "uint256" },
+      { type: "uint256" },
+      { type: "address[]" },
+      { type: "bool" },
+      { type: "uint256[]" },
     ],
     [params.walletAddress, params.amountIn, params.amountOutMin, params.path, false, []],
   );
@@ -94,9 +83,8 @@ export async function executeLevel(params: ExecuteLevelParams): Promise<{ txHash
   });
 
   return executeViaSession({
-    sessionKeyAddress: params.sessionKeyAddress,
+    walletAddress: params.walletAddress,
     sessionSigner: params.sessionSigner,
     calls: [{ to: params.universalRouterAddress, data: executeCalldata }],
   });
 }
-

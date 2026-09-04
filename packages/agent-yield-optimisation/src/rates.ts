@@ -75,14 +75,16 @@ export async function getVenusSupplyApr(
 }
 
 /**
- * NOT IMPLEMENTED. Lista's liquid-staking APR isn't a single view call —
- * it's implied by the slisBNB/BNB exchange rate's change over time, which
- * means tracking it yourself over a window or pulling Lista's own
- * published figure from their API. Needs a data source this file
- * doesn't have.
+ * NOT IMPLEMENTED HERE, and not going to be — see hireForListaApr in
+ * hireDataAgent.ts instead. Lista's liquid-staking APR isn't a single
+ * view call (it's implied by the slisBNB/BNB exchange rate's change over
+ * time), and rather than build that tracking or a Lista API integration
+ * ourselves, session 18 wired this to hire an existing agent that already
+ * has it, via the ERC-8183 buyer side. This function stays a throwing
+ * stub deliberately, as a pointer, not because the gap is still open.
  */
 export async function getListaApr(): Promise<never> {
-  throw new Error("Lista APR not implemented — needs exchange-rate tracking or Lista's API. See comment above.");
+  throw new Error("Use hireForListaApr from hireDataAgent.ts instead — see the comment above.");
 }
 
 /**
