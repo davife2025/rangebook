@@ -379,3 +379,36 @@ Grid Trading can now run for real, which means: the required trading
 task for the Advantage Report is unblocked, the win-rate track record
 TermiX weights becomes producible, and three of four agents are fully
 real end to end (only Rebalancing's write remains stubbed).
+
+## Session 10 — static audit, not new code
+
+Prompted by a real question: nine sessions of edits, changed signatures,
+and new cross-package imports is exactly the situation where something
+gets missed. Checked rather than assumed.
+
+**Found and fixed**
+
+- `packages/altana` has imported `AgentCategory` from `@rangebook/db` in
+  both `skills.ts` and `session.ts` since session 1, but never declared
+  `@rangebook/db` as a dependency in its `package.json`. Would have
+  failed to resolve under pnpm's default strict, non-hoisted dependency
+  isolation on the first real `pnpm install` — the exact kind of thing
+  that wastes an hour on a trivial cause.
+
+**Checked and clean**
+
+- Every cross-package import has a matching declared dependency (one
+  exception, above, now fixed)
+- Every call site of every function whose signature changed mid-project
+  (`readPosition`, `fulfillRebalanceJob`, `executeLevel`,
+  `fulfillGridJob`) matches its current definition — no stale callers
+  left behind
+- Every barrel export (`index.ts`) actually re-exports what other
+  packages import from it
+- Every package's `main`/`types` field resolves to a real file
+
+**Still true**
+
+This is a static read-through, not a real compile — it catches the class
+of error most likely to have crept in (missing deps, stale call sites)
+but isn't a substitute for an actual `tsc` run in a real environment.
